@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Certificate Batch Generator</title>
+<style>
+  :root {
+    --navy: #12324f;
+    --navy-deep: #0b2338;
+    --gold: #c8973a;
+    --paper: #f7f5f0;
+    --ink: #1c2b36;
+    --ink-soft: #5c6b74;
+    --line: #d8d3c6;
+    --ok: #2f7a4f;
+    --err: #a53b3b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  .rail {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 14px;
+    background: linear-gradient(180deg, var(--navy), var(--navy-deep));
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 32px 96px;
+    padding-left: 46px;
+  }
+
+  header.hero {
+    margin-bottom: 48px;
+  }
+
+  .eyebrow {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: 40px;
+    line-height: 1.1;
+    margin: 0 0 16px;
+    color: var(--navy-deep);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 56ch;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 36px;
+    margin-bottom: 28px;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--gold);
+    border-radius: 3px 3px 0 0;
+  }
+
+  .step-label {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .step-title {
+    font-size: 20px;
+    color: var(--navy-deep);
+    margin: 0 0 18px;
+    font-weight: 500;
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: 3px;
+    padding: 26px 20px;
+    text-align: center;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    background: #fcfbf8;
+  }
+
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--gold);
+    background: #fbf6ea;
+  }
+
+  .dropzone input { display: none; }
+
+  .dz-title {
+    font-size: 14.5px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .dz-sub {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .dz-filename {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ok);
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .thumb-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+  }
+
+  .thumb-row img {
+    max-width: 140px;
+    max-height: 108px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+  }
+
+  details.advanced {
+    margin-top: 22px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  details.advanced summary {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .field label {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+  }
+
+  .field select, .field input[type=text] {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13.5px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: #fff;
+    color: var(--ink);
+  }
+
+  .field.full { grid-column: 1 / -1; }
+
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 8px;
+  }
+
+  button.generate {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 2px;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  button.generate:hover:not(:disabled) { background: var(--navy-deep); }
+
+  button.generate:disabled {
+    background: #b9bfc4;
+    cursor: not-allowed;
+  }
+
+  .status {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .status.err { color: var(--err); }
+  .status.ok { color: var(--ok); }
+
+  .progress-wrap {
+    margin-top: 18px;
+    display: none;
+  }
+
+  .progress-wrap.active { display: block; }
+
+  .progress-track {
+    height: 6px;
+    background: #ece8dd;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    transition: width 0.15s ease;
+  }
+
+  .progress-text {
+    margin-top: 8px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .preview-block {
+    margin-top: 24px;
+  }
+
+  .preview-block img {
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+  }
+
+  .preview-caption {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+  }
+
+  footer {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 36px;
+  }
+
+  a.subtle { color: var(--navy); }
+</style>
+</head>
+<body>
+<div class="rail"></div>
+<main>
+  <header class="hero">
+    <div class="eyebrow">Certificate Batch Generator</div>
+    <h1>Turn a blank certificate and a roster into signed, ready-to-send PDFs.</h1>
+    <p class="lede">Upload the blank certificate template and the Excel roster. Everything runs in your browser — no files leave your machine — and you'll get back a zip of individually named PDFs.</p>
+  </header>
+
+  <section class="card">
+    <div class="step-label">Step 1</div>
+    <h2 class="step-title">Blank certificate template (PNG)</h2>
+    <div class="dropzone" id="pngDrop">
+      <input type="file" id="pngInput" accept="image/png">
+      <div class="dz-title">Drop the blank certificate PNG here, or click to choose a file</div>
+      <div class="dz-sub">This should be the certificate with NAME / TRAINING_DATE / ROLE placeholders on it.</div>
+      <div class="dz-filename" id="pngFilename"></div>
+      <div class="thumb-row" id="pngThumbRow" style="display:none;"><img id="pngThumb" alt="Template preview"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="step-label">Step 2</div>
+    <h2 class="step-title">Roster (Excel)</h2>
+    <div class="dropzone" id="xlsxDrop">
+      <input type="file" id="xlsxInput" accept=".xlsx,.xls">
+      <div class="dz-title">Drop the roster spreadsheet here, or click to choose a file</div>
+      <div class="dz-sub">Needs columns for a timestamp, a full name, and a role trained.</div>
+      <div class="dz-filename" id="xlsxFilename"></div>
+    </div>
+
+    <details class="advanced">
+      <summary>Advanced: sheet &amp; column mapping</summary>
+      <div class="field-grid">
+        <div class="field full">
+          <label for="sheetSelect">Sheet</label>
+          <select id="sheetSelect"></select>
+        </div>
+        <div class="field">
+          <label for="tsCol">Timestamp column</label>
+          <select id="tsCol"></select>
+        </div>
+        <div class="field">
+          <label for="nameCol">Full name column</label>
+          <select id="nameCol"></select>
+        </div>
+        <div class="field">
+          <label for="roleCol">Role trained column</label>
+          <select id="roleCol"></select>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <div class="step-label">Step 3</div>
+    <h2 class="step-title">Generate &amp; download</h2>
+    <div class="action-row">
+      <button class="generate" id="generateBtn" disabled>Generate certificates</button>
+      <span class="status" id="statusText">Upload both files to continue.</span>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText"></div>
+    </div>
+    <div class="preview-block" id="previewBlock" style="display:none;">
+      <img id="previewImg" alt="Certificate preview">
+      <div class="preview-caption">Preview of the first certificate generated in this batch.</div>
+    </div>
+  </section>
+
+  <footer>
+    Runs entirely client-side using <a class="subtle" href="https://sheetjs.com/" target="_blank" rel="noopener">SheetJS</a>,
+    <a class="subtle" href="https://github.com/parallax/jsPDF" target="_blank" rel="noopener">jsPDF</a>, and
+    <a class="subtle" href="https://stuk.github.io/jszip/" target="_blank" rel="noopener">JSZip</a>.
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // Layout constants, derived from the reference 801x621 blank
+  // certificate template. Coordinates are scaled proportionally for
+  // whatever size PNG the user uploads.
+  // ------------------------------------------------------------------
+  const TEMPLATE_SIZE = { w: 801, h: 621 };
+  const NAME_LINE = { x1: 267, x2: 736, y: 312 };
+  const ROLE_LINE = { x1: 267, x2: 736, y: 460 };
+  const DATE_CENTER = { x: 485, y: 357 };
+
+  const NAME_ERASE = { x1: 267, x2: 736, y1: 269, y2: 310 };
+  const DATE_ERASE = { x1: 335, x2: 635, y1: 335, y2: 372 };
+  const ROLE_ERASE = { x1: 267, x2: 736, y1: 415, y2: 458 };
+
+  const BG_SAMPLE_POINT = { x: 770, y: 230 };
+
+  const DEFAULT_COLS = {
+    timestamp: "Timestamp",
+    name: "Full Name",
+    role: "Officer Role Trained"
+  };
+
+  // ------------------------------------------------------------------
+  // State
+  // ------------------------------------------------------------------
+  let pngFile = null;
+  let pngImage = null; // HTMLImageElement, loaded
+  let workbook = null;
+  let sheetRows = null; // array of arrays, current sheet
+  let headers = [];
+
+  // ------------------------------------------------------------------
+  // Elements
+  // ------------------------------------------------------------------
+  const pngDrop = document.getElementById("pngDrop");
+  const pngInput = document.getElementById("pngInput");
+  const pngFilename = document.getElementById("pngFilename");
+  const pngThumbRow = document.getElementById("pngThumbRow");
+  const pngThumb = document.getElementById("pngThumb");
+
+  const xlsxDrop = document.getElementById("xlsxDrop");
+  const xlsxInput = document.getElementById("xlsxInput");
+  const xlsxFilename = document.getElementById("xlsxFilename");
+
+  const sheetSelect = document.getElementById("sheetSelect");
+  const tsCol = document.getElementById("tsCol");
+  const nameCol = document.getElementById("nameCol");
+  const roleCol = document.getElementById("roleCol");
+
+  const generateBtn = document.getElementById("generateBtn");
+  const statusText = document.getElementById("statusText");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressFill = document.getElementById("progressFill");
+  const progressText = document.getElementById("progressText");
+  const previewBlock = document.getElementById("previewBlock");
+  const previewImg = document.getElementById("previewImg");
+
+  // ------------------------------------------------------------------
+  // Drag & drop wiring
+  // ------------------------------------------------------------------
+  function wireDropzone(zone, input, onFile) {
+    zone.addEventListener("click", () => input.click());
+    input.addEventListener("change", () => {
+      if (input.files && input.files[0]) onFile(input.files[0]);
+    });
+    ["dragenter", "dragover"].forEach(evt =>
+      zone.addEventListener(evt, e => {
+        e.preventDefault();
+        zone.classList.add("drag");
+      })
+    );
+    ["dragleave", "drop"].forEach(evt =>
+      zone.addEventListener(evt, e => {
+        e.preventDefault();
+        zone.classList.remove("drag");
+      })
+    );
+    zone.addEventListener("drop", e => {
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) onFile(f);
+    });
+  }
+
+  wireDropzone(pngDrop, pngInput, handlePngFile);
+  wireDropzone(xlsxDrop, xlsxInput, handleXlsxFile);
+
+  function handlePngFile(file) {
+    pngFile = file;
+    pngFilename.textContent = file.name;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      pngImage = img;
+      pngThumb.src = url;
+      pngThumbRow.style.display = "flex";
+      refreshReadyState();
+    };
+    img.onerror = () => {
+      setStatus("Could not read that PNG file.", "err");
+    };
+    img.src = url;
+  }
+
+  function handleXlsxFile(file) {
+    xlsxFilename.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        workbook = XLSX.read(data, { type: "array", cellDates: true });
+        populateSheetSelect();
+      } catch (err) {
+        setStatus("Could not read that Excel file: " + err.message, "err");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function populateSheetSelect() {
+    sheetSelect.innerHTML = "";
+    workbook.SheetNames.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sheetSelect.appendChild(opt);
+    });
+    sheetSelect.onchange = loadSheet;
+    loadSheet();
+  }
+
+  function loadSheet() {
+    const name = sheetSelect.value || workbook.SheetNames[0];
+    const ws = workbook.Sheets[name];
+    sheetRows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+    headers = (sheetRows[0] || []).map(h => (h == null ? "" : String(h).trim()));
+    populateColumnSelect(tsCol, DEFAULT_COLS.timestamp);
+    populateColumnSelect(nameCol, DEFAULT_COLS.name);
+    populateColumnSelect(roleCol, DEFAULT_COLS.role);
+    refreshReadyState();
+  }
+
+  function populateColumnSelect(selectEl, defaultValue) {
+    selectEl.innerHTML = "";
+    headers.forEach(h => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = h || "(blank)";
+      selectEl.appendChild(opt);
+    });
+    const match = headers.find(h => h === defaultValue);
+    if (match) selectEl.value = match;
+  }
+
+  function refreshReadyState() {
+    const ready = !!pngImage && !!sheetRows;
+    generateBtn.disabled = !ready;
+    if (ready) {
+      setStatus("Ready. " + (sheetRows.length - 1) + " row(s) found in the sheet.", "ok");
+    } else {
+      setStatus("Upload both files to continue.");
+    }
+  }
+
+  function setStatus(msg, kind) {
+    statusText.textContent = msg;
+    statusText.className = "status" + (kind ? " " + kind : "");
+  }
+
+  // ------------------------------------------------------------------
+  // Formatting helpers
+  // ------------------------------------------------------------------
+  function formatTrainingDate(value) {
+    let d = null;
+    if (value instanceof Date && !isNaN(value)) {
+      d = value;
+    } else if (typeof value === "number") {
+      // Excel serial date fallback
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) d = new Date(parsed.y, parsed.m - 1, parsed.d);
+    } else if (typeof value === "string") {
+      const parsed = new Date(value);
+      if (!isNaN(parsed)) d = parsed;
+    }
+    if (!d) return value == null ? "" : String(value);
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  }
+
+  function sanitizeFilename(name) {
+    return name.replace(/[\\/*?:"<>|]/g, "").replace(/\s+/g, " ").trim();
+  }
+
+  // ------------------------------------------------------------------
+  // Canvas drawing — mirrors the Python reference implementation
+  // ------------------------------------------------------------------
+  function scaleRect(rect, sx, sy) {
+    return {
+      x1: rect.x1 * sx, x2: rect.x2 * sx,
+      y1: rect.y1 * sy, y2: rect.y2 * sy
+    };
+  }
+
+  function fitFont(ctx, text, weight, maxWidth, startSize, minSize) {
+    let size = startSize;
+    while (size > minSize) {
+      ctx.font = weight + " " + size + "px Georgia, 'Times New Roman', serif";
+      if (ctx.measureText(text).width <= maxWidth) return size;
+      size -= 1;
+    }
+    return minSize;
+  }
+
+  function drawCenteredText(ctx, text, font, centerX, baselineY, fillStyle) {
+    ctx.font = font;
+    ctx.fillStyle = fillStyle;
+    ctx.textBaseline = "alphabetic";
+    const width = ctx.measureText(text).width;
+    ctx.fillText(text, centerX - width / 2, baselineY);
+  }
+
+  function renderCertificateCanvas(name, role, dateStr) {
+    const w = pngImage.naturalWidth;
+    const h = pngImage.naturalHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(pngImage, 0, 0, w, h);
+
+    const sx = w / TEMPLATE_SIZE.w;
+    const sy = h / TEMPLATE_SIZE.h;
+
+    // Sample background color near a known-blank point so the fill
+    // works on non-white templates too.
+    const sampleX = Math.min(Math.round(BG_SAMPLE_POINT.x * sx), w - 1);
+    const sampleY = Math.min(Math.round(BG_SAMPLE_POINT.y * sy), h - 1);
+    const px = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+    const bg = "rgb(" + px[0] + "," + px[1] + "," + px[2] + ")";
+
+    // Erase the NAME / TRAINING_DATE / ROLE placeholder text.
+    ctx.fillStyle = bg;
+    [NAME_ERASE, DATE_ERASE, ROLE_ERASE].forEach(rect => {
+      const r = scaleRect(rect, sx, sy);
+      ctx.fillRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
+    });
+
+    const nameLine = { x1: NAME_LINE.x1 * sx, x2: NAME_LINE.x2 * sx, y: NAME_LINE.y * sy };
+    const roleLine = { x1: ROLE_LINE.x1 * sx, x2: ROLE_LINE.x2 * sx, y: ROLE_LINE.y * sy };
+    const dateCenter = { x: DATE_CENTER.x * sx, y: DATE_CENTER.y * sy };
+
+    const nameMaxWidth = (nameLine.x2 - nameLine.x1) * 0.92;
+    const roleMaxWidth = (roleLine.x2 - roleLine.x1) * 0.92;
+
+    const nameSize = fitFont(ctx, name, "bold", nameMaxWidth, Math.round(28 * h / TEMPLATE_SIZE.h), 14);
+    const roleSize = fitFont(ctx, role, "bold", roleMaxWidth, Math.round(22 * h / TEMPLATE_SIZE.h), 14);
+    const dateSize = Math.round(16 * h / TEMPLATE_SIZE.h);
+
+    drawCenteredText(
+      ctx, name,
+      "bold " + nameSize + "px Georgia, 'Times New Roman', serif",
+      (nameLine.x1 + nameLine.x2) / 2, nameLine.y - 4 * sy,
+      "#141414"
+    );
+    drawCenteredText(
+      ctx, role,
+      "bold " + roleSize + "px Georgia, 'Times New Roman', serif",
+      (roleLine.x1 + roleLine.x2) / 2, roleLine.y - 4 * sy,
+      "#141414"
+    );
+    drawCenteredText(
+      ctx, dateStr,
+      dateSize + "px Georgia, serif",
+      dateCenter.x, dateCenter.y + 6 * sy,
+      "#141414"
+    );
+
+    return canvas;
+  }
+
+  function canvasToPdfBlob(canvas) {
+    const { jsPDF } = window.jspdf;
+    const w = canvas.width;
+    const h = canvas.height;
+    const doc = new jsPDF({
+      orientation: w >= h ? "landscape" : "portrait",
+      unit: "px",
+      format: [w, h]
+    });
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    doc.addImage(imgData, "JPEG", 0, 0, w, h);
+    return doc.output("blob");
+  }
+
+  // ------------------------------------------------------------------
+  // Main generate flow
+  // ------------------------------------------------------------------
+  generateBtn.addEventListener("click", async () => {
+    if (!pngImage || !sheetRows) return;
+
+    const tsIdx = headers.indexOf(tsCol.value);
+    const nameIdx = headers.indexOf(nameCol.value);
+    const roleIdx = headers.indexOf(roleCol.value);
+
+    if (tsIdx === -1 || nameIdx === -1 || roleIdx === -1) {
+      setStatus("Could not match the selected columns. Check Advanced settings.", "err");
+      return;
+    }
+
+    const dataRows = sheetRows.slice(1).filter(r => r && r.some(v => v != null && v !== ""));
+    if (dataRows.length === 0) {
+      setStatus("No data rows found in the sheet.", "err");
+      return;
+    }
+
+    generateBtn.disabled = true;
+    progressWrap.classList.add("active");
+    previewBlock.style.display = "none";
+    setStatus("Generating…");
+
+    const zip = new JSZip();
+    const usedNames = new Map();
+    let generated = 0;
+    let skipped = 0;
+    let firstPreviewUrl = null;
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      const rawName = row[nameIdx];
+      const rawRole = row[roleIdx];
+      const rawTs = row[tsIdx];
+
+      if (!rawName || !rawRole || rawTs == null || rawTs === "") {
+        skipped++;
+        continue;
+      }
+
+      const name = String(rawName).trim();
+      const role = String(rawRole).trim();
+      const dateStr = formatTrainingDate(rawTs);
+
+      const canvas = renderCertificateCanvas(name, role, dateStr);
+
+      if (!firstPreviewUrl) {
+        firstPreviewUrl = canvas.toDataURL("image/png");
+      }
+
+      const blob = canvasToPdfBlob(canvas);
+
+      let baseName = sanitizeFilename(name + " - " + role + " - " + dateStr);
+      let finalName = baseName + ".pdf";
+      const count = usedNames.get(baseName) || 0;
+      if (count > 0) {
+        finalName = baseName + " (" + (count + 1) + ").pdf";
+      }
+      usedNames.set(baseName, count + 1);
+
+      zip.file(finalName, blob);
+      generated++;
+
+      progressFill.style.width = Math.round(((i + 1) / dataRows.length) * 100) + "%";
+      progressText.textContent = "Row " + (i + 1) + " of " + dataRows.length + " — " + finalName;
+
+      // Yield to the browser so the UI stays responsive on large rosters.
+      if (i % 3 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+
+    if (generated === 0) {
+      setStatus("No certificates generated — every row was missing data.", "err");
+      generateBtn.disabled = false;
+      progressWrap.classList.remove("active");
+      return;
+    }
+
+    progressText.textContent = "Zipping " + generated + " certificate(s)…";
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const a = document.createElement("a");
+    a.href = zipUrl;
+    a.download = "certificates.zip";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    if (firstPreviewUrl) {
+      previewImg.src = firstPreviewUrl;
+      previewBlock.style.display = "block";
+    }
+
+    setStatus(
+      "Done — " + generated + " certificate(s) generated" +
+      (skipped ? ", " + skipped + " row(s) skipped (missing data)" : "") + ".",
+      "ok"
+    );
+    progressWrap.classList.remove("active");
+    generateBtn.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>
